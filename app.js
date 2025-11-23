@@ -41,12 +41,12 @@ function saveAppData() {
 
 function initializeApp() {
     if (!appState.company) {
-        // Show setup modal
-        document.getElementById('setupModal').style.display = 'flex';
+        // Show setup view
+        document.getElementById('setupView').style.display = 'flex';
         setupCompanyForm();
     } else {
         // Show main app
-        document.getElementById('setupModal').style.display = 'none';
+        document.getElementById('setupView').style.display = 'none';
         document.getElementById('app').style.display = 'block';
         initializeDashboard();
         initializeInvoiceForm();
@@ -75,8 +75,8 @@ function setupCompanyForm() {
 
         saveAppData();
 
-        // Hide modal and show app
-        document.getElementById('setupModal').style.display = 'none';
+        // Hide setup view and show app
+        document.getElementById('setupView').style.display = 'none';
         document.getElementById('app').style.display = 'block';
 
         initializeDashboard();
