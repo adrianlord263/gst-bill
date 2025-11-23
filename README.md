@@ -46,19 +46,6 @@ A mobile-friendly GST billing application for small businesses to create invoice
 3. **Create Invoices**: Click the + button to start creating invoices
 4. **Track Sales**: Use dashboard filters to view sales by period
 
-## 📸 Screenshots
-
-### Company Setup
-![Company Setup](C:/Users/manoj kumar gupta/.gemini/antigravity/brain/4862abe7-99a5-4d7f-bf9d-e384f03c4180/company_setup_modal_1763886427262.png)
-
-### Invoice Creation
-![Invoice Form](C:/Users/manoj kumar gupta/.gemini/antigravity/brain/4862abe7-99a5-4d7f-bf9d-e384f03c4180/invoice_form_view_2_1763886527582.png)
-
-### Completed Invoice with Calculations
-![Filled Invoice](C:/Users/manoj kumar gupta/.gemini/antigravity/brain/4862abe7-99a5-4d7f-bf9d-e384f03c4180/filled_invoice_form_2_1763887145439.png)
-
-## 🧮 GST Calculation Example
-
 | Item | Description | Qty | Rate | Amount |
 |------|-------------|-----|------|--------|
 | 1 | Web Development Services | 2 | ₹50,000 | ₹100,000 |
