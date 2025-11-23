@@ -4,49 +4,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <div class="setup-header">
-        <h1>🏢 Welcome to GST Billing</h1>
-        <p>Let's set up your company details</p>
-    </div>
-    <form id="companySetupForm">
-        <div class="form-group">
-            <label for="companyName">Company Name *</label>
-            <input type="text" id="companyName" required placeholder="Enter your company name">
-        </div>
-        <div class="form-group">
-            <label for="companyGSTIN">GSTIN *</label>
-            <input type="text" id="companyGSTIN" required placeholder="15-digit GSTIN"
-                pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}" maxlength="15">
-        </div>
-        <div class="form-group">
-            <label for="companyAddress">Address *</label>
-            <textarea id="companyAddress" required placeholder="Enter complete address" rows="3"></textarea>
-        </div>
-        <div class="form-group">
-            <label for="companyPhone">Phone Number *</label>
-            <input type="tel" id="companyPhone" required placeholder="10-digit phone number" pattern="[0-9]{10}"
-                maxlength="10">
-        </div>
-        <div class="form-group">
-            <label for="companyEmail">Email *</label>
-            <input type="email" id="companyEmail" required placeholder="company@example.com">
-        </div>
-        <div class="form-group">
-            <label for="companyLogo">Company Logo (Optional)</label>
-            <div class="logo-upload-container">
-                <input type="file" id="companyLogo" accept="image/*" style="display: none;">
-                <button type="button" class="btn-upload-logo" onclick="document.getElementById('companyLogo').click()">
-                    <span id="logoUploadText">📷 Upload Logo</span>
-                </button>
-                <div id="logoPreview" class="logo-preview" style="display: none;">
-                    <img id="logoPreviewImg" src="" alt="Logo Preview">
-                    <button type="button" class="btn-remove-logo" onclick="removeLogo()">×</button>
-                </div>
+    <title>GST Billing System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Company Setup View -->
+    <div id="setupView" class="setup-container">
+        <div class="setup-card">
+            <div class="setup-header">
+                <h1>🏢 Welcome to GST Billing</h1>
+                <p>Let's set up your company details</p>
             </div>
+            <form id="companySetupForm">
+                <div class="form-group">
+                    <label for="companyName">Company Name *</label>
+                    <input type="text" id="companyName" required placeholder="Enter your company name">
+                </div>
+                <div class="form-group">
+                    <label for="companyGSTIN">GSTIN *</label>
+                    <input type="text" id="companyGSTIN" required placeholder="15-digit GSTIN"
+                        pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}" maxlength="15">
+                </div>
+                <div class="form-group">
+                    <label for="companyAddress">Address *</label>
+                    <textarea id="companyAddress" required placeholder="Enter complete address" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="companyPhone">Phone Number *</label>
+                    <input type="tel" id="companyPhone" required placeholder="10-digit phone number" pattern="[0-9]{10}"
+                        maxlength="10">
+                </div>
+                <div class="form-group">
+                    <label for="companyEmail">Email *</label>
+                    <input type="email" id="companyEmail" required placeholder="company@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="companyLogo">Company Logo (Optional)</label>
+                    <div class="logo-upload-container">
+                        <input type="file" id="companyLogo" accept="image/*" style="display: none;">
+                        <button type="button" class="btn-upload-logo"
+                            onclick="document.getElementById('companyLogo').click()">
+                            <span id="logoUploadText">📷 Upload Logo</span>
+                        </button>
+                        <div id="logoPreview" class="logo-preview" style="display: none;">
+                            <img id="logoPreviewImg" src="" alt="Logo Preview">
+                            <button type="button" class="btn-remove-logo" onclick="removeLogo()">×</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-large">Complete Setup</button>
+            </form>
         </div>
-        <button type="submit" class="btn btn-primary btn-large">Complete Setup</button>
-    </form>
-    </div>
     </div>
 
     <!-- Main App Container -->
@@ -307,6 +316,6 @@
     </div>
 
     <script src="app.js"></script>
-    </body>
+</body>
 
 </html>
