@@ -2,7 +2,7 @@
 
 A mobile-friendly GST billing application for small businesses to create invoices, track sales, and manage GST filings.
 
-![Dashboard Preview](C:/Users/manoj kumar gupta/.gemini/antigravity/brain/4862abe7-99a5-4d7f-bf9d-e384f03c4180/dashboard_view_2_1763886512457.png)
+
 
 ## ✨ Features
 
