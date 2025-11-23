@@ -1,0 +1,571 @@
+// ===== Application State =====
+let appState = {
+    company: null,
+    invoices: [],
+    currentInvoiceNumber: 1,
+    currentFilter: '30days',
+    customDateRange: { start: null, end: null }
+};
+
+// ===== Initialization =====
+document.addEventListener('DOMContentLoaded', () => {
+    loadAppData();
+    initializeApp();
+});
+
+function loadAppData() {
+    // Load company data
+    const companyData = localStorage.getItem('gst_company');
+    if (companyData) {
+        appState.company = JSON.parse(companyData);
+    }
+
+    // Load invoices
+    const invoicesData = localStorage.getItem('gst_invoices');
+    if (invoicesData) {
+        appState.invoices = JSON.parse(invoicesData);
+    }
+
+    // Load invoice number
+    const invoiceNumber = localStorage.getItem('gst_invoice_number');
+    if (invoiceNumber) {
+        appState.currentInvoiceNumber = parseInt(invoiceNumber);
+    }
+}
+
+function saveAppData() {
+    localStorage.setItem('gst_company', JSON.stringify(appState.company));
+    localStorage.setItem('gst_invoices', JSON.stringify(appState.invoices));
+    localStorage.setItem('gst_invoice_number', appState.currentInvoiceNumber.toString());
+}
+
+function initializeApp() {
+    if (!appState.company) {
+        // Show setup modal
+        document.getElementById('setupModal').style.display = 'flex';
+        setupCompanyForm();
+    } else {
+        // Show main app
+        document.getElementById('setupModal').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        initializeDashboard();
+        initializeInvoiceForm();
+    }
+}
+
+// ===== Company Setup =====
+function setupCompanyForm() {
+    const form = document.getElementById('companySetupForm');
+    const logoInput = document.getElementById('companyLogo');
+
+    // Handle logo upload
+    logoInput.addEventListener('change', handleLogoUpload);
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        appState.company = {
+            name: document.getElementById('companyName').value,
+            gstin: document.getElementById('companyGSTIN').value.toUpperCase(),
+            address: document.getElementById('companyAddress').value,
+            phone: document.getElementById('companyPhone').value,
+            email: document.getElementById('companyEmail').value,
+            logo: appState.company?.logo || null
+        };
+
+        saveAppData();
+
+        // Hide modal and show app
+        document.getElementById('setupModal').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+
+        initializeDashboard();
+        initializeInvoiceForm();
+    });
+}
+
+function handleLogoUpload(e) {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            const logoData = event.target.result;
+
+            // Store in app state
+            if (!appState.company) appState.company = {};
+            appState.company.logo = logoData;
+
+            // Show preview
+            document.getElementById('logoPreviewImg').src = logoData;
+            document.getElementById('logoPreview').style.display = 'block';
+            document.getElementById('logoUploadText').textContent = '✓ Logo Uploaded';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeLogo() {
+    if (appState.company) {
+        appState.company.logo = null;
+    }
+    document.getElementById('logoPreview').style.display = 'none';
+    document.getElementById('logoUploadText').textContent = '📷 Upload Logo';
+    document.getElementById('companyLogo').value = '';
+}
+
+// ===== Dashboard =====
+function initializeDashboard() {
+    setupFilterButtons();
+    setupNavigationButtons();
+    updateDashboard();
+}
+
+function setupFilterButtons() {
+    const filterChips = document.querySelectorAll('.filter-chip');
+    filterChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            filterChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+
+            const filter = chip.dataset.filter;
+            appState.currentFilter = filter;
+
+            if (filter === 'custom') {
+                document.getElementById('customDateRange').style.display = 'flex';
+            } else {
+                document.getElementById('customDateRange').style.display = 'none';
+                updateDashboard();
+            }
+        });
+    });
+
+    document.getElementById('applyCustomFilter').addEventListener('click', () => {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (startDate && endDate) {
+            appState.customDateRange = { start: startDate, end: endDate };
+            updateDashboard();
+        }
+    });
+}
+
+function setupNavigationButtons() {
+    document.getElementById('createInvoiceBtn').addEventListener('click', () => {
+        showView('invoiceView');
+        resetInvoiceForm();
+    });
+
+    document.getElementById('backToDashboard').addEventListener('click', () => {
+        showView('dashboardView');
+        updateDashboard();
+    });
+
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+        if (confirm('Do you want to edit company details? This will reload the setup form.')) {
+            document.getElementById('setupModal').style.display = 'flex';
+            populateCompanyForm();
+        }
+    });
+}
+
+function populateCompanyForm() {
+    if (appState.company) {
+        document.getElementById('companyName').value = appState.company.name;
+        document.getElementById('companyGSTIN').value = appState.company.gstin;
+        document.getElementById('companyAddress').value = appState.company.address;
+        document.getElementById('companyPhone').value = appState.company.phone;
+        document.getElementById('companyEmail').value = appState.company.email;
+
+        // Show logo if exists
+        if (appState.company.logo) {
+            document.getElementById('logoPreviewImg').src = appState.company.logo;
+            document.getElementById('logoPreview').style.display = 'block';
+            document.getElementById('logoUploadText').textContent = '✓ Logo Uploaded';
+        }
+    }
+}
+
+function showView(viewId) {
+    document.querySelectorAll('.view').forEach(view => {
+        view.classList.remove('active');
+    });
+    document.getElementById(viewId).classList.add('active');
+}
+
+function updateDashboard() {
+    const filteredInvoices = getFilteredInvoices();
+
+    // Update stats
+    const totalSales = filteredInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const totalGST = filteredInvoices.reduce((sum, inv) => sum + inv.cgst + inv.sgst, 0);
+
+    document.getElementById('totalSales').textContent = formatCurrency(totalSales);
+    document.getElementById('gstPayable').textContent = formatCurrency(totalGST);
+
+    // Update period label
+    const periodLabel = getPeriodLabel();
+    document.getElementById('salesPeriod').textContent = periodLabel;
+
+    // Update recent invoices
+    displayRecentInvoices(filteredInvoices);
+}
+
+function getFilteredInvoices() {
+    const now = new Date();
+    let startDate;
+
+    switch (appState.currentFilter) {
+        case 'today':
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            break;
+        case '7days':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        case '30days':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        case 'custom':
+            if (appState.customDateRange.start && appState.customDateRange.end) {
+                return appState.invoices.filter(inv => {
+                    const invDate = new Date(inv.date);
+                    return invDate >= new Date(appState.customDateRange.start) &&
+                        invDate <= new Date(appState.customDateRange.end);
+                });
+            }
+            return appState.invoices;
+        default:
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    return appState.invoices.filter(inv => new Date(inv.date) >= startDate);
+}
+
+function getPeriodLabel() {
+    switch (appState.currentFilter) {
+        case 'today':
+            return 'Today';
+        case '7days':
+            return 'Last 7 Days';
+        case '30days':
+            return 'Last 30 Days';
+        case 'custom':
+            if (appState.customDateRange.start && appState.customDateRange.end) {
+                return `${appState.customDateRange.start} to ${appState.customDateRange.end}`;
+            }
+            return 'Custom Period';
+        default:
+            return 'Last 30 Days';
+    }
+}
+
+function displayRecentInvoices(invoices) {
+    const container = document.getElementById('recentInvoicesList');
+
+    if (invoices.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📄</div>
+                <p>No invoices yet</p>
+                <p class="empty-subtitle">Create your first invoice to get started</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Sort by date (newest first) and take top 5
+    const recentInvoices = [...invoices]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5);
+
+    container.innerHTML = recentInvoices.map(invoice => `
+        <div class="invoice-item" onclick="viewInvoice('${invoice.invoiceNo}')">
+            <div class="invoice-info">
+                <h4>${invoice.invoiceNo} - ${invoice.customerName}</h4>
+                <p>${formatDate(invoice.date)}</p>
+            </div>
+            <div class="invoice-amount">${formatCurrency(invoice.grandTotal)}</div>
+        </div>
+    `).join('');
+}
+
+function viewInvoice(invoiceNo) {
+    const invoice = appState.invoices.find(inv => inv.invoiceNo === invoiceNo);
+    if (invoice) {
+        alert(`Invoice Details:\n\nInvoice No: ${invoice.invoiceNo}\nCustomer: ${invoice.customerName}\nDate: ${formatDate(invoice.date)}\nGrand Total: ${formatCurrency(invoice.grandTotal)}\n\nFull invoice view coming soon!`);
+    }
+}
+
+// ===== Invoice Form =====
+function initializeInvoiceForm() {
+    setupCollapsibleCards();
+    setupItemManagement();
+    setupInvoiceFormHandlers();
+}
+
+function setupCollapsibleCards() {
+    document.querySelectorAll('.card-header[data-toggle]').forEach(header => {
+        header.addEventListener('click', () => {
+            const card = header.closest('.card');
+            card.classList.toggle('collapsed');
+        });
+    });
+}
+
+function setupItemManagement() {
+    document.getElementById('addItemBtn').addEventListener('click', addItem);
+    addItem(); // Add first item by default
+}
+
+let itemCounter = 0;
+
+function addItem() {
+    itemCounter++;
+    const itemsList = document.getElementById('itemsList');
+
+    const itemRow = document.createElement('div');
+    itemRow.className = 'item-row';
+    itemRow.dataset.itemId = itemCounter;
+
+    itemRow.innerHTML = `
+        <div class="item-header">
+            <span class="item-label">Item ${itemCounter}</span>
+            <button type="button" class="remove-item-btn" onclick="removeItem(${itemCounter})">×</button>
+        </div>
+        <div class="item-fields">
+            <div class="form-group">
+                <label>Item Description</label>
+                <input type="text" class="item-description" placeholder="E.g., Web Design Services" required>
+            </div>
+            <div class="field-row">
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" class="item-quantity" min="1" value="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Rate</label>
+                    <input type="number" class="item-rate" min="0" step="0.01" placeholder="0.00" required>
+                </div>
+            </div>
+        </div>
+    `;
+
+    itemsList.appendChild(itemRow);
+
+    // Add event listeners for calculation
+    const quantityInput = itemRow.querySelector('.item-quantity');
+    const rateInput = itemRow.querySelector('.item-rate');
+
+    quantityInput.addEventListener('input', calculateTotals);
+    rateInput.addEventListener('input', calculateTotals);
+}
+
+function removeItem(itemId) {
+    const itemRow = document.querySelector(`[data-item-id="${itemId}"]`);
+    if (itemRow) {
+        itemRow.remove();
+        calculateTotals();
+
+        // Renumber remaining items
+        const items = document.querySelectorAll('.item-row');
+        items.forEach((item, index) => {
+            item.querySelector('.item-label').textContent = `Item ${index + 1}`;
+        });
+    }
+}
+
+function setupInvoiceFormHandlers() {
+    const form = document.getElementById('invoiceForm');
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        showInvoicePreview();
+    });
+
+    document.getElementById('saveDraftBtn').addEventListener('click', () => {
+        saveDraft();
+    });
+
+    // Preview screen handlers
+    document.getElementById('backToInvoiceForm').addEventListener('click', () => {
+        showView('invoiceView');
+    });
+
+    document.getElementById('editInvoiceBtn').addEventListener('click', () => {
+        showView('invoiceView');
+    });
+
+    document.getElementById('previewSaveDraftBtn').addEventListener('click', () => {
+        saveDraft();
+    });
+
+    document.getElementById('previewGenerateBtn').addEventListener('click', () => {
+        generateInvoice();
+    });
+
+    // Set default invoice date to today
+    resetInvoiceForm();
+}
+
+function resetInvoiceForm() {
+    // Set invoice number
+    document.getElementById('invoiceNo').value = `#${String(appState.currentInvoiceNumber).padStart(5, '0')}`;
+
+    // Set today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('invoiceDate').value = today;
+
+    // Clear customer details
+    document.getElementById('customerName').value = '';
+    document.getElementById('customerGSTIN').value = '';
+
+    // Clear items
+    document.getElementById('itemsList').innerHTML = '';
+    itemCounter = 0;
+    addItem();
+
+    calculateTotals();
+}
+
+function calculateTotals() {
+    const items = document.querySelectorAll('.item-row');
+    let subtotal = 0;
+
+    items.forEach(item => {
+        const quantity = parseFloat(item.querySelector('.item-quantity').value) || 0;
+        const rate = parseFloat(item.querySelector('.item-rate').value) || 0;
+        subtotal += quantity * rate;
+    });
+
+    const cgst = subtotal * 0.09; // 9%
+    const sgst = subtotal * 0.09; // 9%
+    const grandTotal = subtotal + cgst + sgst;
+
+    document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('cgst').textContent = formatCurrency(cgst);
+    document.getElementById('sgst').textContent = formatCurrency(sgst);
+    document.getElementById('grandTotal').textContent = formatCurrency(grandTotal);
+}
+
+function getInvoiceData() {
+    const items = [];
+    document.querySelectorAll('.item-row').forEach(itemRow => {
+        const description = itemRow.querySelector('.item-description').value;
+        const quantity = parseFloat(itemRow.querySelector('.item-quantity').value);
+        const rate = parseFloat(itemRow.querySelector('.item-rate').value);
+
+        if (description && quantity && rate) {
+            items.push({ description, quantity, rate, amount: quantity * rate });
+        }
+    });
+
+    const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+    const cgst = subtotal * 0.09;
+    const sgst = subtotal * 0.09;
+    const grandTotal = subtotal + cgst + sgst;
+
+    return {
+        invoiceNo: document.getElementById('invoiceNo').value,
+        date: document.getElementById('invoiceDate').value,
+        customerName: document.getElementById('customerName').value,
+        customerGSTIN: document.getElementById('customerGSTIN').value.toUpperCase(),
+        items,
+        subtotal,
+        cgst,
+        sgst,
+        grandTotal,
+        createdAt: new Date().toISOString()
+    };
+}
+
+function showInvoicePreview() {
+    const invoiceData = getInvoiceData();
+
+    if (!invoiceData.customerName) {
+        alert('Please enter customer name');
+        return;
+    }
+
+    if (invoiceData.items.length === 0) {
+        alert('Please add at least one item');
+        return;
+    }
+
+    // Populate preview
+    document.getElementById('previewCompanyName').textContent = appState.company.name;
+    document.getElementById('previewCompanyAddress').textContent = appState.company.address;
+    document.getElementById('previewCompanyGSTIN').textContent = `GSTIN: ${appState.company.gstin}`;
+
+    // Show logo or placeholder
+    if (appState.company.logo) {
+        document.getElementById('previewCompanyLogo').src = appState.company.logo;
+        document.getElementById('previewCompanyLogo').style.display = 'block';
+        document.getElementById('previewLogoPlaceholder').style.display = 'none';
+    } else {
+        document.getElementById('previewCompanyLogo').style.display = 'none';
+        document.getElementById('previewLogoPlaceholder').style.display = 'flex';
+    }
+
+    // Customer details
+    document.getElementById('previewCustomerName').textContent = invoiceData.customerName;
+    if (invoiceData.customerGSTIN) {
+        document.getElementById('previewCustomerGSTIN').textContent = `GSTIN: ${invoiceData.customerGSTIN}`;
+        document.getElementById('previewCustomerGSTIN').style.display = 'block';
+    } else {
+        document.getElementById('previewCustomerGSTIN').style.display = 'none';
+    }
+
+    // Invoice meta
+    document.getElementById('previewInvoiceNo').textContent = invoiceData.invoiceNo;
+    document.getElementById('previewInvoiceDate').textContent = formatDate(invoiceData.date);
+
+    // Items table
+    const itemsBody = document.getElementById('previewItemsBody');
+    itemsBody.innerHTML = invoiceData.items.map(item => `
+        <tr>
+            <td>${item.description}</td>
+            <td>${item.quantity}</td>
+            <td>${formatCurrency(item.rate)}</td>
+            <td>${formatCurrency(item.amount)}</td>
+        </tr>
+    `).join('');
+
+    // Totals
+    document.getElementById('previewSubtotal').textContent = formatCurrency(invoiceData.subtotal);
+    document.getElementById('previewCGST').textContent = formatCurrency(invoiceData.cgst);
+    document.getElementById('previewSGST').textContent = formatCurrency(invoiceData.sgst);
+    document.getElementById('previewGrandTotal').textContent = formatCurrency(invoiceData.grandTotal);
+}
+
+// Save as draft (you could add a draft flag)
+invoiceData.isDraft = true;
+appState.invoices.push(invoiceData);
+appState.currentInvoiceNumber++;
+saveAppData();
+
+alert('Draft saved successfully!');
+showView('dashboardView');
+updateDashboard();
+}
+
+// ===== Utility Functions =====
+function formatCurrency(amount) {
+    return '₹' + amount.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// Make functions available globally
+window.removeItem = removeItem;
+window.viewInvoice = viewInvoice;
+window.removeLogo = removeLogo;

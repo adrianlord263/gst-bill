@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <div class="setup-header">
+        <h1>🏢 Welcome to GST Billing</h1>
+        <p>Let's set up your company details</p>
+    </div>
+    <form id="companySetupForm">
+        <div class="form-group">
+            <label for="companyName">Company Name *</label>
+            <input type="text" id="companyName" required placeholder="Enter your company name">
+        </div>
+        <div class="form-group">
+            <label for="companyGSTIN">GSTIN *</label>
+            <input type="text" id="companyGSTIN" required placeholder="15-digit GSTIN"
+                pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}" maxlength="15">
+        </div>
+        <div class="form-group">
+            <label for="companyAddress">Address *</label>
+            <textarea id="companyAddress" required placeholder="Enter complete address" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="companyPhone">Phone Number *</label>
+            <input type="tel" id="companyPhone" required placeholder="10-digit phone number" pattern="[0-9]{10}"
+                maxlength="10">
+        </div>
+        <div class="form-group">
+            <label for="companyEmail">Email *</label>
+            <input type="email" id="companyEmail" required placeholder="company@example.com">
+        </div>
+        <div class="form-group">
+            <label for="companyLogo">Company Logo (Optional)</label>
+            <div class="logo-upload-container">
+                <input type="file" id="companyLogo" accept="image/*" style="display: none;">
+                <button type="button" class="btn-upload-logo" onclick="document.getElementById('companyLogo').click()">
+                    <span id="logoUploadText">📷 Upload Logo</span>
+                </button>
+                <div id="logoPreview" class="logo-preview" style="display: none;">
+                    <img id="logoPreviewImg" src="" alt="Logo Preview">
+                    <button type="button" class="btn-remove-logo" onclick="removeLogo()">×</button>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-large">Complete Setup</button>
+    </form>
+    </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">GST Billing</h1>
+                <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+            </div>
+        </header>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="view active">
+            <div class="dashboard-container">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card sales-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <p class="stat-label">Total Sales</p>
+                            <h2 class="stat-value" id="totalSales">₹0.00</h2>
+                            <p class="stat-period" id="salesPeriod">This Month</p>
+                        </div>
+                    </div>
+                    <div class="stat-card gst-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-content">
+                            <p class="stat-label">GST Payable</p>
+                            <h2 class="stat-value" id="gstPayable">₹0.00</h2>
+                            <p class="stat-period">Current Period</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Filters -->
+                <div class="filter-section">
+                    <h3 class="section-title">Filter Period</h3>
+                    <div class="filter-chips">
+                        <button class="filter-chip" data-filter="today">Today</button>
+                        <button class="filter-chip" data-filter="7days">Last 7 Days</button>
+                        <button class="filter-chip active" data-filter="30days">Last 30 Days</button>
+                        <button class="filter-chip" data-filter="custom">Custom</button>
+                    </div>
+                    <div id="customDateRange" class="custom-date-range" style="display: none;">
+                        <input type="date" id="startDate" class="date-input">
+                        <span>to</span>
+                        <input type="date" id="endDate" class="date-input">
+                        <button id="applyCustomFilter" class="btn btn-small">Apply</button>
+                    </div>
+                </div>
+
+                <!-- Recent Invoices -->
+                <div class="recent-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Recent Invoices</h3>
+                        <button id="viewAllInvoices" class="text-btn">View All</button>
+                    </div>
+                    <div id="recentInvoicesList" class="invoices-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">📄</div>
+                            <p>No invoices yet</p>
+                            <p class="empty-subtitle">Create your first invoice to get started</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Create Invoice FAB -->
+                <button id="createInvoiceBtn" class="fab" title="Create New Invoice">
+                    <span class="fab-icon">+</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Invoice Creation View -->
+        <div id="invoiceView" class="view">
+            <div class="invoice-container">
+                <div class="invoice-header">
+                    <button id="backToDashboard" class="back-btn">←</button>
+                    <h2>New Invoice</h2>
+                </div>
+
+                <form id="invoiceForm">
+                    <!-- Invoice Details -->
+                    <div class="card collapsible-card">
+                        <div class="card-header" data-toggle="invoiceDetails">
+                            <h3>Invoice Details</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="invoiceDetails" class="card-content">
+                            <div class="form-group">
+                                <label for="invoiceNo">Invoice No.</label>
+                                <input type="text" id="invoiceNo" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="invoiceDate">Invoice Date</label>
+                                <input type="date" id="invoiceDate" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Details -->
+                    <div class="card collapsible-card">
+                        <div class="card-header" data-toggle="customerDetails">
+                            <h3>Customer Details (Bill To)</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="customerDetails" class="card-content">
+                            <div class="form-group">
+                                <label for="customerName">Customer Name</label>
+                                <input type="text" id="customerName" required placeholder="Search or add new customer">
+                            </div>
+                            <div class="form-group">
+                                <label for="customerGSTIN">Customer GSTIN</label>
+                                <input type="text" id="customerGSTIN" placeholder="Enter 15-digit GSTIN (Optional)"
+                                    pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}" maxlength="15">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items -->
+                    <div class="card collapsible-card">
+                        <div class="card-header" data-toggle="itemsSection">
+                            <h3>Items</h3>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div id="itemsSection" class="card-content">
+                            <div id="itemsList">
+                                <!-- Items will be added dynamically -->
+                            </div>
+                            <button type="button" id="addItemBtn" class="btn-add-item">
+                                <span class="add-icon">+</span> Add Another Item
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="card summary-card">
+                        <h3>Summary</h3>
+                        <div class="summary-content">
+                            <div class="summary-row">
+                                <span>Subtotal</span>
+                                <span id="subtotal">₹0.00</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>CGST (9%)</span>
+                                <span id="cgst">₹0.00</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>SGST (9%)</span>
+                                <span id="sgst">₹0.00</span>
+                            </div>
+                            <div class="summary-row grand-total">
+                                <span>Grand Total</span>
+                                <span id="grandTotal">₹0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="invoice-actions">
+                        <button type="button" id="saveDraftBtn" class="btn btn-secondary">Save Draft</button>
+                        <button type="submit" class="btn btn-primary">Preview Invoice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Invoice Preview View -->
+        <div id="previewView" class="view">
+            <div class="preview-container">
+                <div class="preview-header">
+                    <button id="backToInvoiceForm" class="back-btn">←</button>
+                    <h2>Invoice Preview</h2>
+                </div>
+
+                <div class="invoice-preview-card">
+                    <!-- Company Header -->
+                    <div class="preview-company-header">
+                        <div class="preview-company-info">
+                            <h3 id="previewCompanyName">Your Company Name</h3>
+                            <p id="previewCompanyAddress">Company Address</p>
+                            <p id="previewCompanyGSTIN">GSTIN: XXXXXXXXXXXX</p>
+                        </div>
+                        <div class="preview-logo-container">
+                            <div id="previewLogoPlaceholder" class="preview-logo-placeholder">
+                                <span>🏢</span>
+                                <small>Logo</small>
+                            </div>
+                            <img id="previewCompanyLogo" class="preview-company-logo" src="" alt="Company Logo"
+                                style="display: none;">
+                        </div>
+                    </div>
+
+                    <!-- Invoice Details -->
+                    <div class="preview-invoice-details">
+                        <div class="preview-bill-to">
+                            <h4>Bill To:</h4>
+                            <p id="previewCustomerName">Customer Name</p>
+                            <p id="previewCustomerGSTIN">GSTIN: XXXXXXXXXXXX</p>
+                        </div>
+                        <div class="preview-invoice-meta">
+                            <p><strong>Invoice #:</strong> <span id="previewInvoiceNo">#00000</span></p>
+                            <p><strong>Date:</strong> <span id="previewInvoiceDate">DD MMM YYYY</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <div class="preview-items-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ITEM</th>
+                                    <th>QTY</th>
+                                    <th>PRICE</th>
+                                    <th>TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewItemsBody">
+                                <!-- Items will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="preview-totals">
+                        <div class="preview-total-row">
+                            <span>Subtotal</span>
+                            <span id="previewSubtotal">₹0.00</span>
+                        </div>
+                        <div class="preview-total-row">
+                            <span>CGST (9%)</span>
+                            <span id="previewCGST">₹0.00</span>
+                        </div>
+                        <div class="preview-total-row">
+                            <span>SGST (9%)</span>
+                            <span id="previewSGST">₹0.00</span>
+                        </div>
+                        <div class="preview-total-row preview-grand-total">
+                            <span>Total</span>
+                            <span id="previewGrandTotal">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Edit Button -->
+                    <button id="editInvoiceBtn" class="btn btn-secondary btn-large">
+                        ✏️ Edit Details
+                    </button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="preview-actions">
+                    <button id="previewSaveDraftBtn" class="btn btn-secondary">Save Draft</button>
+                    <button id="previewGenerateBtn" class="btn btn-primary">Generate Invoice</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    </body>
+
+</html>
