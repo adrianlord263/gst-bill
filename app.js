@@ -336,7 +336,7 @@ function addItem() {
         <div class="item-fields">
             <div class="form-group">
                 <label>Item Description</label>
-                <input type="text" class="item-description" placeholder="E.g., Web Design Services" required>
+                <input type="text" class="item-description" placeholder="E.g., blowjob" required>
             </div>
             <div class="field-row">
                 <div class="form-group">
