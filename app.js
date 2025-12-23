@@ -336,9 +336,13 @@ function addItem() {
         <div class="item-fields">
             <div class="form-group">
                 <label>Item Description</label>
-                <input type="text" class="item-description" placeholder="E.g., blowjob" required>
+                <input type="text" class="item-description" placeholder="E.g., Product/Service name" required>
             </div>
             <div class="field-row">
+                <div class="form-group">
+                    <label>HSN/SAC</label>
+                    <input type="text" class="item-hsn" placeholder="HSN/SAC Code" maxlength="8">
+                </div>
                 <div class="form-group">
                     <label>Quantity</label>
                     <input type="number" class="item-quantity" min="1" value="1" required>
@@ -346,6 +350,10 @@ function addItem() {
                 <div class="form-group">
                     <label>Rate</label>
                     <input type="number" class="item-rate" min="0" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label>GST %</label>
+                    <input type="number" class="item-gst" min="0" max="100" step="0.01" value="18" placeholder="18" required>
                 </div>
             </div>
         </div>
@@ -356,9 +364,11 @@ function addItem() {
     // Add event listeners for calculation
     const quantityInput = itemRow.querySelector('.item-quantity');
     const rateInput = itemRow.querySelector('.item-rate');
+    const gstInput = itemRow.querySelector('.item-gst');
 
     quantityInput.addEventListener('input', calculateTotals);
     rateInput.addEventListener('input', calculateTotals);
+    gstInput.addEventListener('input', calculateTotals);
 }
 
 function removeItem(itemId) {
@@ -434,39 +444,48 @@ function resetInvoiceForm() {
 function calculateTotals() {
     const items = document.querySelectorAll('.item-row');
     let subtotal = 0;
+    let totalGST = 0;
 
     items.forEach(item => {
         const quantity = parseFloat(item.querySelector('.item-quantity').value) || 0;
         const rate = parseFloat(item.querySelector('.item-rate').value) || 0;
-        subtotal += quantity * rate;
+        const gstPercent = parseFloat(item.querySelector('.item-gst').value) || 0;
+
+        const itemAmount = quantity * rate;
+        const itemGST = itemAmount * (gstPercent / 100);
+
+        subtotal += itemAmount;
+        totalGST += itemGST;
     });
 
-    const cgst = subtotal * 0.09; // 9%
-    const sgst = subtotal * 0.09; // 9%
-    const grandTotal = subtotal + cgst + sgst;
+    const grandTotal = subtotal + totalGST;
 
     document.getElementById('subtotal').textContent = formatCurrency(subtotal);
-    document.getElementById('cgst').textContent = formatCurrency(cgst);
-    document.getElementById('sgst').textContent = formatCurrency(sgst);
+    document.getElementById('totalGST').textContent = formatCurrency(totalGST);
     document.getElementById('grandTotal').textContent = formatCurrency(grandTotal);
 }
 
 function getInvoiceData() {
     const items = [];
+    let totalGST = 0;
+
     document.querySelectorAll('.item-row').forEach(itemRow => {
         const description = itemRow.querySelector('.item-description').value;
+        const hsn = itemRow.querySelector('.item-hsn').value || '';
         const quantity = parseFloat(itemRow.querySelector('.item-quantity').value);
         const rate = parseFloat(itemRow.querySelector('.item-rate').value);
+        const gstPercent = parseFloat(itemRow.querySelector('.item-gst').value) || 0;
 
         if (description && quantity && rate) {
-            items.push({ description, quantity, rate, amount: quantity * rate });
+            const amount = quantity * rate;
+            const gstAmount = amount * (gstPercent / 100);
+            totalGST += gstAmount;
+            items.push({ description, hsn, quantity, rate, gstPercent, amount, gstAmount });
         }
     });
 
     const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
-    const cgst = subtotal * 0.09;
-    const sgst = subtotal * 0.09;
-    const grandTotal = subtotal + cgst + sgst;
+    const grandTotal = subtotal + totalGST;
 
     return {
         invoiceNo: document.getElementById('invoiceNo').value,
@@ -476,8 +495,7 @@ function getInvoiceData() {
         customerAddress: document.getElementById('customerAddress') ? document.getElementById('customerAddress').value : '',
         items,
         subtotal,
-        cgst,
-        sgst,
+        totalGST,
         grandTotal,
         createdAt: new Date().toISOString()
     };
@@ -499,7 +517,12 @@ function showInvoicePreview() {
     // Populate preview
     document.getElementById('previewCompanyName').textContent = appState.company.name;
     document.getElementById('previewCompanyAddress').textContent = appState.company.address;
-    document.getElementById('previewCompanyGSTIN').textContent = `GSTIN: ${appState.company.gstin}`;
+    if (appState.company.gstin) {
+        document.getElementById('previewCompanyGSTIN').textContent = `GSTIN: ${appState.company.gstin}`;
+        document.getElementById('previewCompanyGSTIN').style.display = 'block';
+    } else {
+        document.getElementById('previewCompanyGSTIN').style.display = 'none';
+    }
 
     // Show logo or placeholder
     if (appState.company.logo) {
@@ -531,14 +554,14 @@ function showInvoicePreview() {
             <td>${item.description}</td>
             <td>${item.quantity}</td>
             <td>${formatCurrency(item.rate)}</td>
-            <td>${formatCurrency(item.amount)}</td>
+            <td>${item.gstPercent}%</td>
+            <td>${formatCurrency(item.amount + item.gstAmount)}</td>
         </tr>
     `).join('');
 
     // Totals
     document.getElementById('previewSubtotal').textContent = formatCurrency(invoiceData.subtotal);
-    document.getElementById('previewCGST').textContent = formatCurrency(invoiceData.cgst);
-    document.getElementById('previewSGST').textContent = formatCurrency(invoiceData.sgst);
+    document.getElementById('previewTotalGST').textContent = formatCurrency(invoiceData.totalGST);
     document.getElementById('previewGrandTotal').textContent = formatCurrency(invoiceData.grandTotal);
 
     // Show preview
@@ -613,7 +636,9 @@ async function generateInvoicePDF(invoiceData) {
     doc.setTextColor(100);
     doc.text(appState.company.address, margin + 30, yPos + 14);
     doc.text(`Email: ${appState.company.email} | Phone: ${appState.company.phone}`, margin + 30, yPos + 19);
-    doc.text(`GSTIN: ${appState.company.gstin}`, margin + 30, yPos + 24);
+    if (appState.company.gstin) {
+        doc.text(`GSTIN: ${appState.company.gstin}`, margin + 30, yPos + 24);
+    }
 
     yPos += 35;
 
@@ -663,13 +688,13 @@ async function generateInvoicePDF(invoiceData) {
     // === Items Table ===
     const tableStartY = yPos;
     const colWidths = {
-        sno: 15,
-        description: 70,
-        hsn: 25,
+        sno: 12,
+        description: 55,
+        hsn: 22,
         qty: 15,
-        rate: 25,
-        gst: 20,
-        amount: 30
+        rate: 28,
+        gst: 18,
+        amount: 35
     };
 
     // Table Header
@@ -715,7 +740,7 @@ async function generateInvoicePDF(invoiceData) {
         doc.text(descLines, xPos, yPos);
         xPos += colWidths.description;
 
-        doc.text('----', xPos, yPos); // HSN/SAC placeholder
+        doc.text(item.hsn || '-', xPos, yPos);
         xPos += colWidths.hsn;
 
         doc.text(String(item.quantity), xPos, yPos);
@@ -724,10 +749,10 @@ async function generateInvoicePDF(invoiceData) {
         doc.text(formatNumberForPDF(item.rate), xPos, yPos);
         xPos += colWidths.rate;
 
-        doc.text('18%', xPos, yPos);
+        doc.text(`${item.gstPercent}%`, xPos, yPos);
         xPos += colWidths.gst;
 
-        doc.text(formatNumberForPDF(item.amount), xPos, yPos);
+        doc.text(formatNumberForPDF(item.amount + item.gstAmount), xPos, yPos);
 
         yPos += Math.max(descLines.length * 5, 6);
     });
@@ -756,41 +781,60 @@ async function generateInvoicePDF(invoiceData) {
     yPos += 10;
 
     // === Totals Section ===
-    const totalsX = pageWidth - margin - 60;
+    const totalsX = pageWidth - margin - 80;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
 
     doc.text('Subtotal:', totalsX, yPos);
-    doc.text(formatNumberForPDF(invoiceData.subtotal), totalsX + 35, yPos, { align: 'right' });
+    doc.text(formatNumberForPDF(invoiceData.subtotal), pageWidth - margin, yPos, { align: 'right' });
     yPos += 6;
 
-    doc.text('CGST (9%):', totalsX, yPos);
-    doc.text(formatNumberForPDF(invoiceData.cgst), totalsX + 35, yPos, { align: 'right' });
-    yPos += 6;
-
-    doc.text('SGST (9%):', totalsX, yPos);
-    doc.text(formatNumberForPDF(invoiceData.sgst), totalsX + 35, yPos, { align: 'right' });
+    doc.text('Total GST:', totalsX, yPos);
+    doc.text(formatNumberForPDF(invoiceData.totalGST), pageWidth - margin, yPos, { align: 'right' });
     yPos += 8;
 
     // Grand Total
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('Grand Total:', totalsX, yPos);
-    doc.text(formatNumberForPDF(invoiceData.grandTotal), totalsX + 35, yPos, { align: 'right' });
+    doc.text(formatNumberForPDF(invoiceData.grandTotal), pageWidth - margin, yPos, { align: 'right' });
 
     yPos += 15;
 
     // === Footer ===
-    if (yPos > pageHeight - 40) {
+    if (yPos > pageHeight - 60) {
         doc.addPage();
         yPos = margin;
     }
 
+    // Terms & Conditions on left
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80);
+    doc.text('Terms & Conditions:', margin, yPos);
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(100);
-    doc.text('Terms & Conditions: Goods once sold will not be taken back. Company is not responsible for delay in shipment.', margin, yPos);
-    doc.text('This is a computer-generated invoice and does not require signature.', margin, yPos + 4);
+    doc.text('1. Goods once sold will not be taken back.', margin, yPos + 5);
+    doc.text('2. Payment is due within 30 days.', margin, yPos + 10);
+
+    // Authorized Signature on right
+    const signatureX = pageWidth - margin - 50;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
+
+    // Draw signature line
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.3);
+    doc.line(signatureX, yPos + 15, pageWidth - margin, yPos + 15);
+
+    // Signature label
+    doc.setFontSize(8);
+    doc.text('Authorized Signature', signatureX + 10, yPos + 20);
+
+    // Company name under signature
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(`For ${appState.company.name}`, signatureX, yPos + 5);
 
     // Save PDF with date in filename
     const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -798,8 +842,16 @@ async function generateInvoicePDF(invoiceData) {
     const invoiceNoClean = invoiceData.invoiceNo.replace('#', '');
     const fileName = `GST_Invoice_${invoiceNoClean}_${customerNameClean}_${dateStr}.pdf`;
 
-    // Save the PDF
-    doc.save(fileName);
+    // Create blob and download with proper filename
+    const pdfBlob = doc.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
     // Show user where file is saved
     console.log(`PDF saved as: ${fileName}`);
@@ -807,10 +859,7 @@ async function generateInvoicePDF(invoiceData) {
 }
 
 function formatNumberForPDF(number) {
-    return '₹' + number.toLocaleString('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
+    return 'Rs. ' + number.toFixed(2);
 }
 
 function formatDateForPDF(dateString) {
